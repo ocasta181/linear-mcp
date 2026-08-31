@@ -1,4 +1,5 @@
 import { LinearClient } from '@linear/sdk';
+import { randomUUID } from 'node:crypto';
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
 
 /**
@@ -218,6 +219,10 @@ export class LinearAuth {
   }
 
   private generateState(): string {
-    return Math.random().toString(36).substring(2, 15);
+    // OAuth `state` is the anti-CSRF bound to a single login attempt; it must be
+    // cryptographically unpredictable. Math.random() is a PRNG seeded from the
+    // current time (predictable), so it is not acceptable for this boundary.
+    // Use a CSPRNG identifier instead (RFC 6749 s4.1.1 state requirement).
+    return randomUUID();
   }
 }
