@@ -10,6 +10,7 @@ export interface ToolHandler {
   // Issue Operations
   handleCreateIssue(args: any): Promise<BaseToolResponse>;
   handleCreateIssues(args: any): Promise<BaseToolResponse>;
+  handleUpdateIssue(args: any): Promise<BaseToolResponse>;
   handleBulkUpdateIssues(args: any): Promise<BaseToolResponse>;
   handleSearchIssues(args: any): Promise<BaseToolResponse>;
   handleDeleteIssue(args: any): Promise<BaseToolResponse>;

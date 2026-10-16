@@ -7,12 +7,12 @@ import {
   CreateIssueInput,
   CreateIssuesInput,
   BulkUpdateIssuesInput,
+  UpdateIssueArgs,
   SearchIssuesInput,
   DeleteIssueInput,
   DeleteIssuesInput,
   CreateIssueResponse,
   CreateIssuesResponse,
-  UpdateIssuesResponse,
   SearchIssuesResponse,
   DeleteIssueResponse,
   Issue,
@@ -111,40 +111,38 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
   }
 
   /**
+   * Updates an existing issue, including its project or parent relationship.
+   */
+  async handleUpdateIssue(args: UpdateIssueArgs): Promise<BaseToolResponse> {
+    try {
+      const client = await this.verifyAuth();
+      this.validateRequiredParams(args, ['id', 'update']);
+      if (Object.keys(args.update).length === 0) throw new Error('At least one update field is required');
+      const result = await client.updateIssue(args.id, args.update);
+      if (!result.issueUpdate.success) throw new Error('Failed to update issue');
+      return this.createResponse('Successfully updated issue');
+    } catch (error) {
+      this.handleError(error, 'update issue');
+    }
+  }
+
+  /**
    * Updates multiple issues in bulk.
    */
   async handleBulkUpdateIssues(args: BulkUpdateIssuesInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['issueIds', 'update']);
 
-      if (!Array.isArray(args.issueIds)) {
-        throw new Error('IssueIds parameter must be an array');
+      if (!Array.isArray(args.issueIds) || args.issueIds.length === 0) {
+        throw new Error('IssueIds must be a non-empty array');
       }
-
-      let result;
-      
-      // Handle single issue update vs bulk update differently
-      if (args.issueIds.length === 1) {
-        // For a single issue, use updateIssue which uses the correct 'id' parameter
-        result = await client.updateIssue(args.issueIds[0], args.update) as UpdateIssuesResponse;
-        
-        if (!result.issueUpdate.success) {
-          throw new Error('Failed to update issue');
-        }
-        
-        return this.createResponse(`Successfully updated issue`);
-      } else {
-        // For multiple issues, use updateIssues
-        result = await client.updateIssues(args.issueIds, args.update) as UpdateIssuesResponse;
-        
-        if (!result.issueUpdate.success) {
-          throw new Error('Failed to update issues');
-        }
-        
-        const updatedCount = result.issueUpdate.issues.length;
-        return this.createResponse(`Successfully updated ${updatedCount} issues`);
-      }
+      if (Object.keys(args.update).length === 0) throw new Error('At least one update field is required');
+      const result = await client.updateIssues(args.issueIds, args.update);
+      if (!result.issueUpdate.success) throw new Error('Failed to update issues');
+      return this.createResponse(args.issueIds.length === 1
+        ? 'Successfully updated issue'
+        : `Successfully updated ${result.issueUpdate.issues.length} issues`);
     } catch (error) {
       this.handleError(error, 'update issues');
     }

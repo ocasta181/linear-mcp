@@ -3,6 +3,17 @@
  * These schemas define the input parameters and validation rules for each tool.
  */
 
+const issueUpdateProperties = {
+  title: { type: 'string', description: 'New issue title' },
+  description: { type: 'string', description: 'New issue description' },
+  stateId: { type: 'string', description: 'New state ID' },
+  assigneeId: { type: 'string', description: 'New assignee ID' },
+  priority: { type: 'number', description: 'New priority (0-4)' },
+  estimate: { type: 'number', description: 'New issue estimate' },
+  projectId: { type: ['string', 'null'], description: 'Project ID to assign, or null to remove the issue from its project' },
+  parentId: { type: ['string', 'null'], description: 'Parent issue ID, or null to remove the parent relationship' },
+};
+
 export const toolSchemas = {
   linear_auth: {
     name: 'linear_auth',
@@ -80,6 +91,10 @@ export const toolSchemas = {
           description: 'Project ID',
           optional: true,
         },
+        parentId: {
+          type: 'string',
+          description: 'Existing parent issue ID; creates this issue as a child',
+        },
         createAsUser: {
           type: 'string',
           description: 'Name to display for the created issue',
@@ -140,6 +155,10 @@ export const toolSchemas = {
                 type: 'string',
                 description: 'Team ID (must match one of the project teamIds)',
               },
+              parentId: {
+                type: 'string',
+                description: 'Existing parent issue ID; creates this issue as a child',
+              },
             },
             required: ['title', 'description', 'teamId'],
           },
@@ -191,6 +210,19 @@ export const toolSchemas = {
     ]
   },
 
+  linear_update_issue: {
+    name: 'linear_update_issue',
+    description: 'Update an existing issue, including its project or parent issue',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        id: { type: 'string', description: 'Issue ID to update' },
+        update: { type: 'object', properties: issueUpdateProperties, minProperties: 1 },
+      },
+      required: ['id', 'update'],
+    },
+  },
+
   linear_bulk_update_issues: {
     name: 'linear_bulk_update_issues',
     description: 'Update multiple issues at once',
@@ -203,31 +235,12 @@ export const toolSchemas = {
             type: 'string',
           },
           description: 'List of issue IDs to update',
+          minItems: 1,
         },
         update: {
           type: 'object',
-          properties: {
-            stateId: {
-              type: 'string',
-              description: 'New state ID',
-              optional: true,
-            },
-            assigneeId: {
-              type: 'string',
-              description: 'New assignee ID',
-              optional: true,
-            },
-            priority: {
-              type: 'number',
-              description: 'New priority (0-4)',
-              optional: true,
-            },
-            estimate: {
-              type: 'number',
-              description: 'Issue estimate points (typically 1, 2, 3, 5, 8, etc.)',
-              optional: true,
-            },
-          },
+          properties: issueUpdateProperties,
+          minProperties: 1,
         },
       },
       required: ['issueIds', 'update'],
@@ -411,6 +424,10 @@ export const toolSchemas = {
                 type: 'string',
                 description: 'Project ID',
                 optional: true,
+              },
+              parentId: {
+                type: 'string',
+                description: 'Existing parent issue ID; creates this issue as a child',
               },
               estimate: {
                 type: 'number',

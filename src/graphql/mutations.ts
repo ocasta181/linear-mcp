@@ -90,23 +90,6 @@ export const UPDATE_ISSUE_MUTATION = gql`
   }
 `;
 
-export const UPDATE_ISSUES_MUTATION = gql`
-  mutation UpdateIssues($ids: [String!]!, $input: IssueUpdateInput!) {
-    issueUpdate(ids: $ids, input: $input) {
-      success
-      issues {
-        id
-        identifier
-        title
-        url
-        state {
-          name
-        }
-      }
-    }
-  }
-`;
-
 export const DELETE_ISSUE_MUTATION = gql`
   mutation DeleteIssue($id: String!) {
     issueDelete(id: $id) {

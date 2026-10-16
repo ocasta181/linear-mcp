@@ -6,6 +6,7 @@ import {
   CreateIssueResponse,
   CreateIssuesResponse,
   UpdateIssueInput,
+  UpdateIssueResponse,
   UpdateIssuesResponse,
   SearchIssuesInput,
   SearchIssuesResponse,
@@ -124,9 +125,9 @@ export class LinearGraphQLClient {
   }
 
   // Update a single issue
-  async updateIssue(id: string, input: UpdateIssueInput): Promise<UpdateIssuesResponse> {
+  async updateIssue(id: string, input: UpdateIssueInput): Promise<UpdateIssueResponse> {
     const { UPDATE_ISSUE_MUTATION } = await import('./mutations.js');
-    return this.execute<UpdateIssuesResponse>(UPDATE_ISSUE_MUTATION, {
+    return this.execute<UpdateIssueResponse>(UPDATE_ISSUE_MUTATION, {
       id,
       input,
     });
@@ -134,8 +135,14 @@ export class LinearGraphQLClient {
 
   // Bulk update issues
   async updateIssues(ids: string[], input: UpdateIssueInput): Promise<UpdateIssuesResponse> {
-    const { UPDATE_ISSUES_MUTATION } = await import('./mutations.js');
-    return this.execute<UpdateIssuesResponse>(UPDATE_ISSUES_MUTATION, { ids, input });
+    if (ids.length === 0) throw new Error('At least one issue ID is required');
+    const results = await Promise.all(ids.map(id => this.updateIssue(id, input)));
+    return {
+      issueUpdate: {
+        success: results.every(result => result.issueUpdate.success && !!result.issueUpdate.issue),
+        issues: results.flatMap(result => result.issueUpdate.issue ? [result.issueUpdate.issue] : []),
+      },
+    };
   }
 
   // Create multiple labels

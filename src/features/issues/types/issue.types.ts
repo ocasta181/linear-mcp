@@ -11,6 +11,7 @@ export interface CreateIssueInput {
   assigneeId?: string;
   priority?: number;
   projectId?: string;
+  parentId?: string;
   estimate?: number;
 }
 
@@ -23,12 +24,19 @@ export interface UpdateIssueInput {
   description?: string;
   assigneeId?: string;
   priority?: number;
-  projectId?: string;
+  projectId?: string | null;
+  parentId?: string | null;
+  estimate?: number;
   stateId?: string;
 }
 
 export interface BulkUpdateIssuesInput {
   issueIds: string[];
+  update: UpdateIssueInput;
+}
+
+export interface UpdateIssueArgs {
+  id: string;
   update: UpdateIssueInput;
 }
 
@@ -94,6 +102,13 @@ export interface IssueBatchResponse {
   };
 }
 
+export interface UpdateIssueResponse {
+  issueUpdate: {
+    success: boolean;
+    issue?: Issue | null;
+  };
+}
+
 export interface UpdateIssuesResponse {
   issueUpdate: {
     success: boolean;
@@ -122,6 +137,7 @@ export interface DeleteIssueResponse {
  */
 
 export interface IssueHandlerMethods {
+  handleUpdateIssue(args: UpdateIssueArgs): Promise<BaseToolResponse>;
   handleCreateIssue(args: CreateIssueInput): Promise<BaseToolResponse>;
   handleCreateIssues(args: CreateIssuesInput): Promise<BaseToolResponse>;
   handleBulkUpdateIssues(args: BulkUpdateIssuesInput): Promise<BaseToolResponse>;

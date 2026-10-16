@@ -6,6 +6,7 @@ import {
   CreateIssueResponse,
   CreateIssuesResponse,
   UpdateIssueInput,
+  UpdateIssueResponse,
   UpdateIssuesResponse,
   SearchIssuesInput,
   SearchIssuesResponse,
@@ -600,7 +601,7 @@ describe('LinearGraphQLClient', () => {
       );
     });
 
-    it('should update multiple issues with a single mutation', async () => {
+    it('should update multiple issues with one valid mutation per issue', async () => {
       const mockResponse = {
         data: {
           issueUpdate: {
@@ -623,22 +624,19 @@ describe('LinearGraphQLClient', () => {
         }
       };
 
-      mockRawRequest.mockResolvedValueOnce(mockResponse);
+      for (const issue of mockResponse.data.issueUpdate.issues) {
+        mockRawRequest.mockResolvedValueOnce({ data: { issueUpdate: { success: true, issue } } });
+      }
 
       const ids = ['issue-1', 'issue-2'];
       const updateInput: UpdateIssueInput = { stateId: 'state-2' };
       const result: UpdateIssuesResponse = await graphqlClient.updateIssues(ids, updateInput);
 
       expect(result).toEqual(mockResponse.data);
-      // Verify single mutation call
-      expect(mockRawRequest).toHaveBeenCalledTimes(1);
-      expect(mockRawRequest).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          ids,
-          input: updateInput
-        })
-      );
+      expect(mockRawRequest).toHaveBeenCalledTimes(2);
+      for (const id of ids) {
+        expect(mockRawRequest).toHaveBeenCalledWith(expect.stringContaining('issueUpdate(id: $id'), { id, input: updateInput });
+      }
     });
 
     it('should handle update errors', async () => {
@@ -810,7 +808,7 @@ describe('LinearGraphQLClient', () => {
 
       const id = 'issue-1';
       const updateInput: UpdateIssueInput = { stateId: 'state-2' };
-      const result: UpdateIssuesResponse = await graphqlClient.updateIssue(id, updateInput);
+      const result: UpdateIssueResponse = await graphqlClient.updateIssue(id, updateInput);
 
       expect(result).toEqual(mockResponse.data);
       // Verify single mutation call with direct id (not array)

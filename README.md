@@ -91,6 +91,18 @@ The server currently supports the following operations:
 - ✅ Create parent/child issue relationships
 - ✅ Read and create comments and threaded comments
 
+Use `linear_update_issue` to move an existing issue into a project:
+
+```json
+{ "id": "issue-id", "update": { "projectId": "project-id" } }
+```
+
+Pass `parentId` when creating an issue to make it a child of an existing issue.
+The same field is available in bulk creation and project-with-issues creation.
+Both single and bulk update tools accept `projectId` and `parentId`; pass `null`
+to remove a project assignment or parent relationship. Bulk updates send one
+mutation per issue and are not atomic: some updates may succeed if another fails.
+
 ### Project Management
 - ✅ Create projects with associated issues
 - ✅ Get project information **with rich text descriptions**
