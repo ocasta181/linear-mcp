@@ -41,9 +41,9 @@ export class AuthHandler extends BaseHandler {
    */
   async handleAuthCallback(args: any): Promise<BaseToolResponse> {
     try {
-      this.validateRequiredParams(args, ['code']);
+      this.validateRequiredParams(args, ['code', 'state']);
 
-      await this.auth.handleCallback(args.code);
+      await this.auth.handleCallback(args.code, args.state);
 
       return this.createResponse('Successfully authenticated with Linear');
     } catch (error) {

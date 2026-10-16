@@ -24,7 +24,7 @@ export class CommentHandler extends BaseHandler implements CommentHandlerMethods
    */
   async handleGetIssueComments(args: GetIssueCommentsInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['issueId']);
 
       const result = await client.getIssueComments(
@@ -81,7 +81,7 @@ export class CommentHandler extends BaseHandler implements CommentHandlerMethods
    */
   async handleCreateComment(args: CreateCommentInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['body', 'issueId']);
 
       const result = await client.createComment(args) as CreateCommentResponse;

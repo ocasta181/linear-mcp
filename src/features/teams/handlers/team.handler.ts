@@ -17,7 +17,7 @@ export class TeamHandler extends BaseHandler {
    */
   async handleGetTeams(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
 
       const result = await client.getTeams();
 

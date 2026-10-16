@@ -11,6 +11,7 @@
     "test:integration": "jest --testPathPattern '\\.integration\\.test\\.ts$'",
     "get-test-tokens": "node --loader ts-node/esm scripts/get-test-tokens.ts",
     "test:oauth": "node --loader ts-node/esm scripts/test-oauth.ts",
+    "test:oauth:stdio": "npm run build && node scripts/test-oauth-stdio.mjs",
     "build": "tsc && chmod +x build/index.js",
     "start": "node build/index.js",
     "dev": "nodemon --watch src --ext ts --exec \"npm run build && npm start\""

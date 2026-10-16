@@ -18,7 +18,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleCreateProjectMilestone(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['name', 'projectId']);
 
       const result = await client.createProjectMilestone({
@@ -64,7 +64,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleUpdateProjectMilestone(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['id']);
 
       const updateInput: any = {};
@@ -109,7 +109,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleDeleteProjectMilestone(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['id']);
 
       const result = await client.deleteProjectMilestone(args.id);
@@ -129,7 +129,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleGetProjectMilestone(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['id']);
 
       const result = await client.getProjectMilestone(args.id);
@@ -153,7 +153,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleSearchProjectMilestones(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
 
       const filter: any = {};
       
@@ -198,7 +198,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleGetProjectMilestones(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['projectId']);
 
       const result = await client.searchProjectMilestones({
@@ -232,7 +232,7 @@ export class MilestoneHandler extends BaseHandler {
    */
   async handleCreateProjectMilestones(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['projectId', 'milestones']);
 
       if (!Array.isArray(args.milestones) || args.milestones.length === 0) {
