@@ -57,6 +57,14 @@ describe('LinearAuth', () => {
   });
 
   describe('getAuthorizationUrl', () => {
+    it('uses only supported Linear OAuth scopes, actor, and parameters (upstream #24)', () => {
+      auth.initialize({ type: 'oauth', clientId: 'client', clientSecret: 'secret', redirectUri: 'http://localhost:3000/callback' });
+      const params = new URL(auth.getAuthorizationUrl()).searchParams;
+      expect(params.get('scope')?.split(',')).toEqual(['read', 'write', 'issues:create']);
+      expect(params.get('actor')).toBe('app');
+      expect(params.has('access_type')).toBe(false);
+    });
+
     it('should return valid authorization URL with OAuth config', () => {
       auth.initialize({
         type: 'oauth',
@@ -111,6 +119,7 @@ describe('LinearAuth', () => {
       const state = new URL(auth.getAuthorizationUrl()).searchParams.get('state')!;
       await expect(auth.handleCallback('valid-code', state)).resolves.not.toThrow();
       expect(auth.isAuthenticated()).toBe(true);
+      expect(new URLSearchParams(mockFetch.mock.calls[0][1]?.body as string).has('access_type')).toBe(false);
     });
 
     it('should throw error when called with API Key config', async () => {

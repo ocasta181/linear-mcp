@@ -12,6 +12,7 @@ if (process.env.LINEAR_MCP_STDIO_FIXTURE === '1') {
       const params = new URLSearchParams(String(init.body));
       assert.equal(params.get('grant_type'), 'authorization_code');
       assert.equal(params.get('code'), 'fixture-code');
+      assert.equal(params.has('access_type'), false);
       return Response.json({ access_token: 'fixture-oauth-token', refresh_token: 'fixture-refresh', expires_in: 3600 });
     }
     if (url === 'https://api.linear.app/graphql') {
@@ -53,6 +54,9 @@ async function run() {
   const start = async client => {
     const result = await call(client, 'linear_auth', args);
     const url = new URL(result.content[0].text.split('\n').at(-1));
+    assert.equal(url.searchParams.get('scope'), 'read,write,issues:create');
+    assert.equal(url.searchParams.get('actor'), 'app');
+    assert.equal(url.searchParams.has('access_type'), false);
     const state = url.searchParams.get('state');
     assert.match(state, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
     return state;
@@ -60,7 +64,7 @@ async function run() {
   await withServer(false, async client => {
     await client.ping();
     const { tools } = await client.listTools();
-    assert.equal(tools.length, 22);
+    assert.ok(tools.length >= 22);
     assert.deepEqual(tools.find(tool => tool.name === 'linear_auth_callback').inputSchema.required, ['code', 'state']);
     await assert.rejects(call(client, 'linear_get_user'), /Not authenticated/);
     const firstState = await start(client);

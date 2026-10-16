@@ -69,10 +69,9 @@ export class LinearAuth {
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       response_type: 'code',
-      scope: 'read,write,issues:create,offline_access',
-      actor: 'application', // Enable OAuth Actor Authorization
+      scope: 'read,write,issues:create',
+      actor: 'app', // Authenticate as the application actor.
       state,
-      access_type: 'offline',
     });
 
     return `${LinearAuth.OAUTH_AUTH_URL}/authorize?${params.toString()}`;
@@ -106,7 +105,6 @@ export class LinearAuth {
         client_secret: config.clientSecret,
         redirect_uri: config.redirectUri,
         code,
-        access_type: 'offline'
       });
 
       const response = await fetch(`${LinearAuth.OAUTH_TOKEN_URL}/oauth/token`, {

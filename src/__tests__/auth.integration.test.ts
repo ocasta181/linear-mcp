@@ -62,8 +62,9 @@ const hasOAuthCredentials = process.env.LINEAR_CLIENT_ID &&
       expect(url).toContain(`client_id=${process.env.LINEAR_CLIENT_ID}`);
       expect(url).toContain(`redirect_uri=${encodeURIComponent(process.env.LINEAR_REDIRECT_URI!)}`);
       expect(url).toContain('response_type=code');
-      expect(url).toContain('scope=read%2Cwrite%2Cissues%3Acreate%2Coffline_access');
-      expect(url).toContain('actor=application');
+      expect(url).toContain('scope=read%2Cwrite%2Cissues%3Acreate');
+      expect(url).toContain('actor=app');
+      expect(new URL(url).searchParams.has('access_type')).toBe(false);
       expect(url).toContain('state=');
     });
 
