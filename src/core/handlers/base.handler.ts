@@ -1,4 +1,5 @@
 import { McpError, ErrorCode } from '@modelcontextprotocol/sdk/types.js';
+import { LinearClient } from '@linear/sdk';
 import { LinearAuth } from '../../auth.js';
 import { LinearGraphQLClient } from '../../graphql/client.js';
 import { BaseToolResponse } from '../interfaces/tool-handler.interface.js';
@@ -8,17 +9,21 @@ import { BaseToolResponse } from '../interfaces/tool-handler.interface.js';
  * All feature-specific handlers should extend this class.
  */
 export abstract class BaseHandler {
+  private linearClient?: LinearClient;
+
   constructor(
     protected readonly auth: LinearAuth,
-    protected readonly graphqlClient: LinearGraphQLClient | undefined
-  ) {}
+    protected graphqlClient: LinearGraphQLClient | undefined
+  ) {
+    if (graphqlClient && auth.isAuthenticated()) this.linearClient = auth.getClient();
+  }
 
   /**
    * Verifies authentication and returns the GraphQL client.
    * Should be called at the start of each handler method.
    */
-  protected verifyAuth(): LinearGraphQLClient {
-    if (!this.auth.isAuthenticated() || !this.graphqlClient) {
+  protected async verifyAuth(): Promise<LinearGraphQLClient> {
+    if (!this.auth.isAuthenticated()) {
       throw new McpError(
         ErrorCode.InvalidRequest,
         'Not authenticated. Call linear_auth first.'
@@ -26,7 +31,13 @@ export abstract class BaseHandler {
     }
 
     if (this.auth.needsTokenRefresh()) {
-      this.auth.refreshAPIKey();
+      await this.auth.refreshAPIKey();
+    }
+
+    const linearClient = this.auth.getClient();
+    if (!this.graphqlClient || this.linearClient !== linearClient) {
+      this.graphqlClient = new LinearGraphQLClient(linearClient);
+      this.linearClient = linearClient;
     }
 
     return this.graphqlClient;

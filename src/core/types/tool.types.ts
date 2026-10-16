@@ -37,8 +37,12 @@ export const toolSchemas = {
           type: 'string',
           description: 'OAuth authorization code',
         },
+        state: {
+          type: 'string',
+          description: 'The state returned in the OAuth redirect for the current authorization attempt',
+        },
       },
-      required: ['code'],
+      required: ['code', 'state'],
     },
   },
 

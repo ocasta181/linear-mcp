@@ -17,7 +17,7 @@ export class UserHandler extends BaseHandler {
    */
   async handleGetUser(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
 
       const result = await client.getCurrentUser();
 

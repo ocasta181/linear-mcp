@@ -43,9 +43,13 @@ export interface TokenData {
 export class LinearAuth {
   private static readonly OAUTH_AUTH_URL = 'https://linear.app/oauth';
   private static readonly OAUTH_TOKEN_URL = 'https://api.linear.app';
+  private static readonly STATE_TTL_MS = 10 * 60 * 1000;
   private config?: AuthConfig;
   private tokenData?: TokenData;
   private linearClient?: LinearClient;
+  private pendingState?: { value: string; expiresAt: number };
+  private authenticationVersion = 0;
+  private refreshPromise?: Promise<void>;
 
   constructor() {}
 
@@ -57,20 +61,23 @@ export class LinearAuth {
       );
     }
 
+    const state = this.generateState();
+    this.pendingState = { value: state, expiresAt: Date.now() + LinearAuth.STATE_TTL_MS };
+    this.authenticationVersion++;
+
     const params = new URLSearchParams({
       client_id: this.config.clientId,
       redirect_uri: this.config.redirectUri,
       response_type: 'code',
-      scope: 'read,write,issues:create,offline_access',
-      actor: 'application', // Enable OAuth Actor Authorization
-      state: this.generateState(),
-      access_type: 'offline',
+      scope: 'read,write,issues:create',
+      actor: 'app', // Authenticate as the application actor.
+      state,
     });
 
     return `${LinearAuth.OAUTH_AUTH_URL}/authorize?${params.toString()}`;
   }
 
-  public async handleCallback(code: string): Promise<void> {
+  public async handleCallback(code: string, state: string): Promise<void> {
     if (!this.config || this.config.type !== 'oauth') {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -78,14 +85,26 @@ export class LinearAuth {
       );
     }
 
+    if (!state || !this.pendingState || state !== this.pendingState.value ||
+        Date.now() >= this.pendingState.expiresAt) {
+      throw new McpError(
+        ErrorCode.InvalidRequest,
+        'Invalid or expired OAuth state. Start a new authorization flow.'
+      );
+    }
+
+    // Consume the state before the first await so concurrent callbacks cannot replay it.
+    this.pendingState = undefined;
+    const version = this.authenticationVersion;
+    const config = this.config;
+
     try {
       const params = new URLSearchParams({
         grant_type: 'authorization_code',
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        redirect_uri: this.config.redirectUri,
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        redirect_uri: config.redirectUri,
         code,
-        access_type: 'offline'
       });
 
       const response = await fetch(`${LinearAuth.OAUTH_TOKEN_URL}/oauth/token`, {
@@ -103,6 +122,7 @@ export class LinearAuth {
       }
 
       const data = await response.json();
+      this.verifyAuthenticationVersion(version);
       this.tokenData = {
         apiKey: data.access_token,
         refreshToken: data.refresh_token,
@@ -110,7 +130,7 @@ export class LinearAuth {
       };
 
       this.linearClient = new LinearClient({
-        apiKey: this.tokenData.apiKey,
+        accessToken: this.tokenData.apiKey,
       });
     } catch (error) {
       throw new McpError(
@@ -121,6 +141,8 @@ export class LinearAuth {
   }
 
   public async refreshAPIKey(): Promise<void> {
+    if (this.refreshPromise) return this.refreshPromise;
+
     if (!this.config || this.config.type !== 'oauth' || !this.tokenData?.refreshToken) {
       throw new McpError(
         ErrorCode.InvalidRequest,
@@ -128,12 +150,24 @@ export class LinearAuth {
       );
     }
 
+    const refreshPromise = this.refreshOAuthToken(
+      this.config, this.tokenData.refreshToken, this.authenticationVersion
+    );
+    this.refreshPromise = refreshPromise;
+    try {
+      await refreshPromise;
+    } finally {
+      if (this.refreshPromise === refreshPromise) this.refreshPromise = undefined;
+    }
+  }
+
+  private async refreshOAuthToken(config: OAuthConfig, refreshToken: string, version: number): Promise<void> {
     try {
       const params = new URLSearchParams({
         grant_type: 'refresh_token',
-        client_id: this.config.clientId,
-        client_secret: this.config.clientSecret,
-        refresh_token: this.tokenData.refreshToken
+        client_id: config.clientId,
+        client_secret: config.clientSecret,
+        refresh_token: refreshToken
       });
 
       const response = await fetch(`${LinearAuth.OAUTH_TOKEN_URL}/oauth/token`, {
@@ -151,14 +185,15 @@ export class LinearAuth {
       }
 
       const data = await response.json();
+      this.verifyAuthenticationVersion(version);
       this.tokenData = {
         apiKey: data.access_token,
-        refreshToken: data.refresh_token,
+        refreshToken: data.refresh_token || refreshToken,
         expiresAt: Date.now() + data.expires_in * 1000,
       };
 
       this.linearClient = new LinearClient({
-        apiKey: this.tokenData.apiKey,
+        accessToken: this.tokenData.apiKey,
       });
     } catch (error) {
       throw new McpError(
@@ -169,6 +204,20 @@ export class LinearAuth {
   }
 
   public initialize(config: AuthConfig): void {
+    if (config.type === 'oauth' && (!config.clientId || !config.clientSecret || !config.redirectUri)) {
+      throw new McpError(
+        ErrorCode.InvalidParams,
+        'Missing required OAuth parameters: clientId, clientSecret, redirectUri'
+      );
+    }
+
+    this.config = config;
+    this.pendingState = undefined;
+    this.tokenData = undefined;
+    this.linearClient = undefined;
+    this.refreshPromise = undefined;
+    this.authenticationVersion++;
+
     if (config.type === 'api') {
       // Personal Access Token flow
       this.tokenData = {
@@ -179,15 +228,6 @@ export class LinearAuth {
       this.linearClient = new LinearClient({
         apiKey: config.apiKey,
       });
-    } else {
-      // OAuth flow
-      if (!config.clientId || !config.clientSecret || !config.redirectUri) {
-        throw new McpError(
-          ErrorCode.InvalidParams,
-          'Missing required OAuth parameters: clientId, clientSecret, redirectUri'
-        );
-      }
-      this.config = config;
     }
   }
 
@@ -213,16 +253,19 @@ export class LinearAuth {
   // For testing purposes
   public setTokenData(tokenData: TokenData): void {
     this.tokenData = tokenData;
-    this.linearClient = new LinearClient({
-      apiKey: tokenData.apiKey,
-    });
+    this.linearClient = new LinearClient(this.config?.type === 'oauth'
+      ? { accessToken: tokenData.apiKey }
+      : { apiKey: tokenData.apiKey });
+  }
+
+  private verifyAuthenticationVersion(version: number): void {
+    if (version !== this.authenticationVersion) {
+      throw new Error('Authentication changed while the token request was in progress. Start a new authorization flow.');
+    }
   }
 
   private generateState(): string {
-    // OAuth `state` is the anti-CSRF bound to a single login attempt; it must be
-    // cryptographically unpredictable. Math.random() is a PRNG seeded from the
-    // current time (predictable), so it is not acceptable for this boundary.
-    // Use a CSPRNG identifier instead (RFC 6749 s4.1.1 state requirement).
+    // OAuth state must be cryptographically unpredictable and verified on callback.
     return randomUUID();
   }
 }

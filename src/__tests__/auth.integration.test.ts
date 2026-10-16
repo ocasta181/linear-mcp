@@ -1,6 +1,9 @@
-import { describe, it, expect, beforeAll } from '@jest/globals';
+import { jest, describe, it, expect, beforeAll } from '@jest/globals';
 import { LinearAuth } from '../auth';
 import { LinearClient } from '@linear/sdk';
+
+// Live integration tests must not inherit the SDK mock from the unit-test setup.
+jest.unmock('@linear/sdk');
 
 // Skip tests if no credentials are configured
 const hasAPIKeyCredentials = process.env.LINEAR_API_KEY;
@@ -59,24 +62,17 @@ const hasOAuthCredentials = process.env.LINEAR_CLIENT_ID &&
       expect(url).toContain(`client_id=${process.env.LINEAR_CLIENT_ID}`);
       expect(url).toContain(`redirect_uri=${encodeURIComponent(process.env.LINEAR_REDIRECT_URI!)}`);
       expect(url).toContain('response_type=code');
-      expect(url).toContain('scope=read%2Cwrite%2Cissues%3Acreate%2Coffline_access');
-      expect(url).toContain('actor=application');
+      expect(url).toContain('scope=read%2Cwrite%2Cissues%3Acreate');
+      expect(url).toContain('actor=app');
+      expect(new URL(url).searchParams.has('access_type')).toBe(false);
       expect(url).toContain('state=');
     });
 
-    // Skip token tests if we don't have auth code and refresh token
-    const hasTokens = process.env.LINEAR_AUTH_CODE && process.env.LINEAR_REFRESH_TOKEN;
-    (hasTokens ? it : it.skip)('should exchange auth code for tokens', async () => {
-      const authCode = process.env.LINEAR_AUTH_CODE;
-      if (!authCode) {
-        throw new Error('LINEAR_AUTH_CODE environment variable is required');
-      }
-
-      await auth.handleCallback(authCode);
-      expect(auth.isAuthenticated()).toBe(true);
+    it('should reject codes without a matching authorization attempt', async () => {
+      await expect(auth.handleCallback('unrelated-code', 'unrelated-state')).rejects.toThrow(/Invalid or expired OAuth state/);
     });
 
-    (hasTokens ? it : it.skip)('should make authenticated requests with OAuth token', async () => {
+    (process.env.LINEAR_REFRESH_TOKEN ? it : it.skip)('should make authenticated requests with OAuth token', async () => {
       // Set initial token data (requires valid refresh token)
       const refreshToken = process.env.LINEAR_REFRESH_TOKEN;
       if (!refreshToken) {

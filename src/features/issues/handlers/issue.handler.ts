@@ -33,7 +33,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleCreateIssue(args: CreateIssueInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['title', 'description', 'teamId']);
 
       // Process input to ensure correct types
@@ -84,7 +84,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleCreateIssues(args: CreateIssuesInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['issues']);
 
       if (!Array.isArray(args.issues)) {
@@ -115,7 +115,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleBulkUpdateIssues(args: BulkUpdateIssuesInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['issueIds', 'update']);
 
       if (!Array.isArray(args.issueIds)) {
@@ -155,7 +155,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleSearchIssues(args: SearchIssuesInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
 
       const filter: Record<string, unknown> = {};
       
@@ -213,7 +213,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleDeleteIssue(args: DeleteIssueInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['id']);
 
       const result = await client.deleteIssue(args.id) as DeleteIssueResponse;
@@ -233,7 +233,7 @@ export class IssueHandler extends BaseHandler implements IssueHandlerMethods {
    */
   async handleDeleteIssues(args: DeleteIssuesInput): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['ids']);
 
       if (!Array.isArray(args.ids)) {

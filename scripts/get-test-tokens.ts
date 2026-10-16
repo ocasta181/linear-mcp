@@ -52,7 +52,7 @@ async function testOAuth() {
 
   // Handle OAuth callback
   app.get('/callback', async (req, res) => {
-    const { code, error } = req.query;
+    const { code, state, error } = req.query;
 
     if (error) {
       console.error('OAuth error:', error);
@@ -66,9 +66,14 @@ async function testOAuth() {
       return;
     }
 
+    if (!state || typeof state !== 'string') {
+      res.status(400).send('Missing OAuth state. Start a new authorization flow.');
+      return;
+    }
+
     try {
       // Exchange code for tokens
-      await auth.handleCallback(code);
+      await auth.handleCallback(code, state);
       
       // Get user info to verify authentication
       const client = auth.getClient();

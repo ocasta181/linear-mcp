@@ -36,7 +36,7 @@ export class ProjectHandler extends BaseHandler {
    */
   async handleCreateProjectWithIssues(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['project', 'issues']);
 
       // Validate project input
@@ -116,7 +116,7 @@ export class ProjectHandler extends BaseHandler {
    */
   async handleGetProject(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['id']);
 
       const result = await client.getProject(args.id);
@@ -141,7 +141,7 @@ export class ProjectHandler extends BaseHandler {
    */
   async handleSearchProjects(args: any): Promise<BaseToolResponse> {
     try {
-      const client = this.verifyAuth();
+      const client = await this.verifyAuth();
       this.validateRequiredParams(args, ['name']);
 
       const result = await client.searchProjects({

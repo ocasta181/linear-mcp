@@ -33,7 +33,7 @@ The server supports two authentication methods:
    LINEAR_API_KEY=your_api_key
    ```
 
-#### OAuth Flow (Alternative) ***NOT IMPLEMENTED***
+#### OAuth Flow (Experimental)
 
 1. Create an OAuth application at https://linear.app/settings/api/applications
 2. Configure OAuth environment variables in `.env`:
@@ -42,6 +42,19 @@ The server supports two authentication methods:
    LINEAR_CLIENT_SECRET=your_oauth_client_secret
    LINEAR_REDIRECT_URI=http://localhost:3000/callback
    ```
+3. Call `linear_auth` with `clientId`, `clientSecret`, and `redirectUri`, then
+   open the returned authorization URL in your browser.
+4. Pass both `code` and `state` from the redirect URL to `linear_auth_callback`
+   in the same running MCP server. State expires after ten minutes and can only
+   be used once. Starting another authorization attempt invalidates the previous
+   URL. Missing, mismatched, expired, or reused state is rejected before any token
+   exchange. After a failed exchange, start a new authorization attempt.
+
+The MCP server does not run an HTTP callback listener. For local browser-based
+testing with a listener on port 3000, use `npm run get-test-tokens`; it generates
+and validates state in the same process. Tokens are held in memory, so restarting
+the server requires authentication again. Live OAuth provider compatibility still
+requires validation with your own Linear application.
 
 ### 3. Running the Server
 
@@ -189,8 +202,12 @@ Integration tests verify that authentication and API calls work correctly:
 
 For OAuth testing:
 1. Configure OAuth credentials in `.env`
-2. Remove `.skip` from OAuth tests in `src/__tests__/auth.integration.test.ts`
-3. Run integration tests
+2. Run `npm run get-test-tokens` to complete a browser authorization in one process
+3. Optionally set `LINEAR_REFRESH_TOKEN` to exercise the live token refresh test
+4. Run integration tests; tests requiring missing credentials are skipped
+
+Run `npm run test:oauth:stdio` for credential-free OAuth and API key regression
+checks over MCP stdio using mocked Linear HTTP responses.
 
 ## Recent Improvements
 
